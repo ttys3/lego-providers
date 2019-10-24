@@ -1,0 +1,21 @@
+Name = "QCloud CNS"
+Description = "qcloud cns dns provider for lego, by 荒野無燈@NanoDM, create SecretId and SecretKey from https://console.cloud.tencent.com/cam/capi"
+URL = "https://cloud.tencent.com/product/cns"
+Code = "qcloud"
+Since = "v3.1.0"
+
+Example = ''''''
+
+[Configuration]
+  [Configuration.Credentials]
+    QCLOUD_SECRET_ID = "The SecretId"
+    QCLOUD_SECRET_KEY = "The SecretKey"
+  [Configuration.Additional]
+    QCLOUD_POLLING_INTERVAL = "Time between DNS propagation check"
+    QCLOUD_PROPAGATION_TIMEOUT = "Maximum waiting time for DNS propagation"
+    QCLOUD_TTL = "The TTL of the TXT record used for the DNS challenge"
+    QCLOUD_HTTP_TIMEOUT = "API request timeout"
+
+[Links]
+  API = "https://cloud.tencent.com/document/product/302/4032"
+  GoClient = "https://github.com/go-http/qcloud-cns"

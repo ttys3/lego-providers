@@ -81,7 +81,7 @@ func (d *DNSProvider) Present(domain, token, keyAuth string) error {
 	}
 
 	recordAttributes := d.newTxtRecord(zoneName, fqdn, value, d.config.TTL)
-	_, err = d.client.RecordCreate(domain, *recordAttributes)
+	_, err = d.client.RecordCreate(zoneName, *recordAttributes)
 	if err != nil {
 		return fmt.Errorf("qcloud cns: RecordCreate() API call failed: %v", err)
 	}
@@ -95,13 +95,19 @@ func (d *DNSProvider) CleanUp(domain, token, keyAuth string) error {
 
 	records, err := d.findTxtRecords(domain, fqdn)
 	if err != nil {
-		return err
+		return fmt.Errorf("CleanUp(): findTxtRecords err: %w", err)
 	}
 
+	_, zoneName, err := d.getHostedZone(domain)
+	if err != nil {
+		return  fmt.Errorf("CleanUp(): getHostedZone err: %w", err)
+	}
+	//fmt.Printf("CleanUp(): zoneName: %s\n", zoneName)
+
 	for _, rec := range records {
-		err := d.client.RecordDelete(domain, rec.Id)
+		err := d.client.RecordDelete(zoneName, rec.Id)
 		if err != nil {
-			return err
+			return fmt.Errorf("CleanUp(): qcloud cns: RecordDelete err: %w", err)
 		}
 	}
 	return nil
@@ -116,7 +122,7 @@ func (d *DNSProvider) Timeout() (timeout, interval time.Duration) {
 func (d *DNSProvider) getHostedZone(domain string) (string, string, error) {
 	zones, err := d.client.DomainList()
 	if err != nil {
-		return "", "", fmt.Errorf("qcloud cnd: DomainList() API call failed: %v", err)
+		return "", "", fmt.Errorf("qcloud cns: DomainList() API call failed: %v", err)
 	}
 
 	authZone, err := dns01.FindZoneByFqdn(dns01.ToFqdn(domain))
@@ -139,8 +145,8 @@ func (d *DNSProvider) getHostedZone(domain string) (string, string, error) {
 }
 
 func (d *DNSProvider) newTxtRecord(zone, fqdn, value string, ttl int) *cns.Record {
-	// fmt.Printf("zone: %v, fqdn: %v, value: %v\n", zone, fqdn, value)
-	// zone: mydomain.com, fqdn: _acme-challenge.mydomain.com., value: ADw2sEd82DUgXcQ9hNBZThJs7zVJkR5v9JeSbAb9mZY---
+	//fmt.Printf("zone: %v, fqdn: %v, value: %v\n", zone, fqdn, value)
+	//zone: mydomain.com, fqdn: _acme-challenge.mydomain.com., value: ADw2sEd82DUgXcQ9hNBZThJs7zVJkR5v9JeSbAb9mZY---
 
 	name := d.extractRecordName(fqdn, zone)
 	//fmt.Printf("subdomain name: %v", name)
@@ -161,9 +167,9 @@ func (d *DNSProvider) findTxtRecords(domain, fqdn string) ([]cns.Record, error) 
 	}
 
 	var records []cns.Record
-	result, err := d.client.RecordList(domain)
+	result, err := d.client.RecordList(zoneName)
 	if err != nil {
-		return records, fmt.Errorf("API call has failed: %v", err)
+		return records, fmt.Errorf("qcloud cns: RecordList() API call has failed: %v", err)
 	}
 
 	recordName := d.extractRecordName(fqdn, zoneName)

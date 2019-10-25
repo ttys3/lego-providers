@@ -74,6 +74,17 @@ func NewDNSProviderConfig(config *Config) (*DNSProvider, error) {
 
 // Present creates a TXT record to fulfill the dns-01 challenge.
 func (d *DNSProvider) Present(domain, token, keyAuth string) error {
+	/*
+	fixup for wildcard domain
+	if it is a wildcard domain, the fqdn will be:
+	_acme-challenge.*.example.com.
+	then the subdomain name to create will be: _acme-challenge.*
+	qcloud does not allow this name to be created, and will return error:
+	[4000](RecordCreate.SubDomainInvalid): (810422)子域名不正确 子域名不正确
+	 */
+	if domain[:2] == "*." {
+		domain = domain[2:]
+	}
 	fqdn, value := dns01.GetRecord(domain, keyAuth)
 	_, zoneName, err := d.getHostedZone(domain)
 	if err != nil {
@@ -91,6 +102,10 @@ func (d *DNSProvider) Present(domain, token, keyAuth string) error {
 
 // CleanUp removes the TXT record matching the specified parameters.
 func (d *DNSProvider) CleanUp(domain, token, keyAuth string) error {
+	// fixup for wildcard domain
+	if domain[:2] == "*." {
+		domain = domain[2:]
+	}
 	fqdn, _ := dns01.GetRecord(domain, keyAuth)
 
 	records, err := d.findTxtRecords(domain, fqdn)
@@ -145,11 +160,11 @@ func (d *DNSProvider) getHostedZone(domain string) (string, string, error) {
 }
 
 func (d *DNSProvider) newTxtRecord(zone, fqdn, value string, ttl int) *cns.Record {
-	//fmt.Printf("zone: %v, fqdn: %v, value: %v\n", zone, fqdn, value)
+	//fmt.Printf("\nzone: %v, fqdn: %v, value: %v\n", zone, fqdn, value)
 	//zone: mydomain.com, fqdn: _acme-challenge.mydomain.com., value: ADw2sEd82DUgXcQ9hNBZThJs7zVJkR5v9JeSbAb9mZY---
 
 	name := d.extractRecordName(fqdn, zone)
-	//fmt.Printf("subdomain name: %v", name)
+	//fmt.Printf("\nsubdomain name: %v\n", name)
 
 	return &cns.Record{
 		Type:  "TXT",
